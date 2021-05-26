@@ -5,6 +5,11 @@
 #   2) take full advantage of biglasso's memory efficiency, and
 #   3) subset a big.matrix object in such a way to construct training and
 #      testing cross-validation sets.
+# 
+# For these tests I assume that the data has already been preprocessed so that 
+# the predictors (X) and responses (Y, survival times and censor indicator) 
+# are in separate files and that the factor predictors have already been mapped
+# to sets of indicators (i.e. X is already the correct design matrix).
 ##
 library(bigmemory)
 library(biglasso)
@@ -27,8 +32,8 @@ set.seed(124)
 # Xbig <- read.big.matrix(file.path(filename), header = T)
 
 ##### TEST 2 ####
-
-filename <- "data/sample_SRTR_cleaned.csv"
+#
+filename <- "data/sample_SRTR_cleaned_X.csv"
 pt <- proc.time()
 Xbig.raw <- read.big.matrix(file.path(filename), header = T)
 proc.time() - pt

@@ -53,7 +53,7 @@ datY <- fread("./data/sample_SRTR_cleaned.csv", select = 16:17,
 proc.time() - pt
 
 # write to disk
-write.csv(Y, "./data/sample_SRTR_cleaned_Y.csv", row.names = F)
+write.csv(datY, "./data/sample_SRTR_cleaned_Y.csv", row.names = F)
 
 ####
 #### TO DO... What is the best way of splitting the final 18, ..., ncol(data)
@@ -61,7 +61,25 @@ write.csv(Y, "./data/sample_SRTR_cleaned_Y.csv", row.names = F)
 #### this is fine, but when dealing with 50000 observations the data occupies
 #### something like (50000 rows * 50000 cols) * 8 bytes per cell ~= 20 gigabytes
 ####
+# For now (just to get the test data in the appropriate format) I'll load &
+# construct the file by loading it in as a matrix & combining it with the
+# first 14 covariates
+#############
+# TEMPORARY #
+#############
+pt <- proc.time()
+dat <- fread("./data/sample_SRTR_cleaned.csv", 
+             na.strings = c("", "NA"), stringsAsFactors = T)
+proc.time() - pt
 
+# isolate final columns
+X2 <- dat[,18:ncol(dat)]
+
+# combine (columnwise) with the first 14 covariates
+X <- cbind(X1, X2)
+
+# write to disk
+write.csv(X, "./data/sample_SRTR_cleaned_X.csv", row.names = F) # this step will take a while
 
 
 
