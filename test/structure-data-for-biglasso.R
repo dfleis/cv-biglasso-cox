@@ -81,11 +81,13 @@ X <- cbind(X1, X2)
 # write to disk
 write.csv(X, "./data/sample_SRTR_cleaned_X.csv", row.names = F) # this step will take a while
 
+# REMOVE ROWS WITH NA VALUES
+# For testing purposes I'll remove all observations containing at least one NA value.
+# This also includes entries that have a blank value, which I have (temporarily) 
+# treated as equivalent to NA.
 
-
-
-
-
+write.csv(datY[complete.cases(X),], "./data/sample_SRTS_cleaned_Y_NArm.csv", row.names = F)
+write.csv(X[complete.cases(X),], "./data/sample_SRTS_cleaned_X_NArm.csv", row.names = F)
 
 
 
