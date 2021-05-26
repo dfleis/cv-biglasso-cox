@@ -33,11 +33,23 @@ pt <- proc.time()
 Xbig.raw <- read.big.matrix(file.path(filename), header = T)
 proc.time() - pt
 
-str(Xbig.raw[,1:14])
+xdesc <- bigmemory::describe(Xbig.raw)
+#XX <- bigmemory::attach.big.matrix(xdesc)
 
 
+Xdesc <- describe(Xbig.raw)
+XX <- attach.big.matrix(Xbig.raw)
+Xdesc@description$nrow
+Xdesc@description$ncol
+
+col.idx <- 1:Xdesc@description$nrow %in% 1:14
+col.idx
 
 
-
-
-
+Xdesc@address
+str(Xdesc)
+  
+  
+  
+  
+  
