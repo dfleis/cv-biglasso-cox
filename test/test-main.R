@@ -21,9 +21,11 @@ library(glmnet)
 library(data.table) # fread() so I can read fewer columns while testing, otherwise read.csv is fine
 options(datatable.fread.datatable=FALSE) # format the data as a data.frame instead of a data.table
 
+NCOLS <- 1000 # number of columns to load (fewer for quicker tests)
+
 # load data
 pt <- proc.time()
-dat <- fread("./data/sample_SRTR_cleaned.csv", select = 1:1000, # select fewer columns for testing (must contain columns 1-17)
+dat <- fread("./data/sample_SRTR_cleaned.csv", select = 1:NCOLS, # select columns (must contain columns 1-17)
              na.strings = c("", "NA"), stringsAsFactors = T)
 proc.time() - pt
 
