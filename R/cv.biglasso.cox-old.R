@@ -1,4 +1,4 @@
-cv.biglasso.cox <- function(x, y, lambda, nfolds, grouped = F, parallel = F, ...) {
+cv.biglasso.cox.old <- function(x, y, lambda, nfolds, grouped = F, parallel = F, ...) {
   # NOTE: The 'grouped' argument replicates the functionality of the 'grouped'
   # argument in cv.glmnet for Cox models. Specifically, if grouped = F then it
   # calculates the cross-validation error by the (weighted) mean of the test data

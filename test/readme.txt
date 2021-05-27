@@ -9,8 +9,13 @@ test-biglasso-no-cv.R
     
 test-biglasso-cv.R
     Compare the output of our new cross-validation function (cv.biglasso.cox()) 
-    with the values obtained by glmnet (cv.glmnet()). In its current form it is
-    not leveraging the utility offered by bigmemory::big.matrix.
+    with the values obtained by glmnet (cv.glmnet()) in a memory-efficient way
+    (i.e. taking full advtange of bigmemory::big.matrix objects).
+
+test-biglasso-cv-old.R
+    Compare the output of our new cross-validation function (cv.biglasso.cox()) 
+    with the values obtained by glmnet (cv.glmnet()).
+    OLD VERSION: Does not leverage the utility offered by bigmemory::big.matrix.
 
 structure-data-for-biglasso.R
     Build a framework to take the data in its original format and convert
