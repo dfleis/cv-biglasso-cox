@@ -8,6 +8,7 @@ cv.biglasso.cox <- function(x, y, lambda, nfolds, grouped = F, parallel = F, ...
   # partial-likelihoods, both using the coefficients obtained from the training data.
   # (I believe the ladder is the Verweij & Van Houwelingen method... 
   #  see https://arxiv.org/pdf/1905.10432.pdf for a comparison [Basic vs. V&VH])
+  #
   n <- nrow(y)
   
   # calculate the biglasso model over the sequence of (default) tuning parameters lambda
@@ -22,11 +23,10 @@ cv.biglasso.cox <- function(x, y, lambda, nfolds, grouped = F, parallel = F, ...
   # assign observations to cross-validation folds from 1, 2, ..., nfolds
   folds <- sample(cut(1:n, breaks = nfolds, labels = F))
   
-  # list of integer vectors containing the row indices of x that will be use
-  # to fit the model (making use of the 'row.idx' argument in biglasso::biglasso())
-  train.row.idx <- lapply(1:nfolds, function(i) which(folds != i))
-  
-  
+  # arrange indices into a list of indicators corresponding to whether data belongs
+  # to the test or training set in each of the cross-validation folds
+  train.idx <- lapply(1:nfolds, function(i) !(folds %in% i))
+
   ##### meat of the CV algorithm is here #####
   train.fun <- function(trn) {
     tst <- !trn # test indices given current training fold
@@ -35,7 +35,7 @@ cv.biglasso.cox <- function(x, y, lambda, nfolds, grouped = F, parallel = F, ...
     # we must create new big.matrix objects
     x.trn <- as.big.matrix(x[trn,,drop=F]); y.trn <- y[trn,,drop=F]
     x.tst <- as.big.matrix(x[tst,,drop=F]); y.tst <- y[tst,,drop=F]
-    
+
     # compute training model and calculate training error
     mod.trn <- biglasso(X = x.trn, y = y.trn, lambda = lambda.init, family = "cox", ...)
     
