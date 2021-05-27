@@ -11,3 +11,10 @@
 library(biglasso)
 
 # strategy: Look at the 'row.idx' argument in biglasso::biglasso()
+
+##### Try to run biglasso by directly loading the design matrix as a big.matrix object
+filenameX <- "data/sample_SRTR_cleaned_X_NArm.csv"
+filenameY <- "data/sample_SRTR_cleaned_Y_NArm.csv"
+pt <- proc.time()
+Xbig <- read.big.matrix(file.path(filenameX), header = T, type = "double")
+proc.time() - pt
