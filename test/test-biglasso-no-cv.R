@@ -25,7 +25,7 @@ library(glmnet)
 library(data.table) # fread() so I can read fewer columns while testing, otherwise read.csv is fine
 options(datatable.fread.datatable=FALSE) # format the data as a data.frame instead of a data.table
 
-NCOLS <- 100 # number of columns to load (fewer for quicker tests)
+NCOLS <- 5000 # number of columns to load (fewer for quicker tests)
 
 # load data
 pt <- proc.time()
