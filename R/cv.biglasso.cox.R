@@ -7,15 +7,15 @@ cv.biglasso.cox <- function(x, y, lambda, nfolds, grouped = F, parallel = F, ...
   # difference between the full-data (train+test) and training data 
   # partial-likelihoods, both using the coefficients obtained from the training data.
   # (I believe the ladder is the Verweij & Van Houwelingen method... 
-  #  see https://arxiv.org/pdf/1905.10432.pdf for a comparison [Basic vs. V&VH])
+  #  see https://arxiv.org/pdf/1905.10432.pdf for a comparison ["Basic" vs. "V&VH"])
   n <- nrow(y)
   
   # calculate the biglasso model over the sequence of (default) tuning parameters lambda
   if (missing(lambda)) {
-    mod.init <- biglasso(X = x, y = y, family = "cox", ...)
+    mod.init <- biglasso::biglasso(X = x, y = y, family = "cox", ...)
     lambda.init <- mod.init$lambda
   } else {
-    mod.init <- biglasso(X = x, y = y, lambda = lambda, family = "cox", ...)
+    mod.init <- biglasso::biglasso(X = x, y = y, lambda = lambda, family = "cox", ...)
     lambda.init <- lambda
   }
   
@@ -28,25 +28,28 @@ cv.biglasso.cox <- function(x, y, lambda, nfolds, grouped = F, parallel = F, ...
   
   
   ##### meat of the CV algorithm is here #####
-  train.fun <- function(trn) {
-    tst <- !trn # test indices given current training fold
+  train.fun <- function(trn.rows) {
+    tst.rows <- !((1:n) %in% trn.rows)
     
-    # non-contiguous subsetting (via sub.big.matrix() is not currently supported) and so
-    # we must create new big.matrix objects
-    x.trn <- as.big.matrix(x[trn,,drop=F]); y.trn <- y[trn,,drop=F]
-    x.tst <- as.big.matrix(x[tst,,drop=F]); y.tst <- y[tst,,drop=F]
+    x.trn <- bigmemory::deepcopy(x = x, rows = trn.rows)
+    x.tst <- bigmemory::deepcopy(x = x, rows = tst.rows)
+    y.trn <- y[trn.rows,,drop=F]
+    y.tst <- y[tst.rows,,drop=F]
     
     # compute training model and calculate training error
-    mod.trn <- biglasso(X = x.trn, y = y.trn, lambda = lambda.init, family = "cox", ...)
+    mod.trn <- biglasso::biglasso(X = x.trn, y = y.trn, lambda = lambda.init, family = "cox", ...)
     
-    # replicate how Cox model cross-validation is done in glmnet
-    wt <- sum(y.tst[,"status"]) # this could be divide-by-zero if the test set is too small (with too many censored observations)
-    if (grouped) {
-      plfull   <- coxnet.deviance(x = x, y = y, beta = mod.trn$beta)
-      plminusk <- coxnet.deviance(x = x.trn, y = y.trn, beta = mod.trn$beta)
+    ### replicate Cox model cross-validation loss is computed in glmnet::glmnet()
+    # calculate the weight associated with the k-th CV fold (done in glmnet())
+    # NOTE: this could be lead to a division-by-zero if test set is too small (when all response
+    # observations are censored in the test set)
+    wt <- sum(y.tst[,"status"]) 
+    if (grouped) { # "V&VH cross-validation error"
+      plfull   <- glmnet::coxnet.deviance(x = x, y = y, beta = mod.trn$beta)
+      plminusk <- glmnet::coxnet.deviance(x = x.trn, y = y.trn, beta = mod.trn$beta)
       loss.raw <- plfull - plminusk
-    } else {
-      plk      <- coxnet.deviance(x = x.tst, y = y.tst, beta = mod.trn$beta)
+    } else { # "basic cross-validation error" 
+      plk      <- glmnet::coxnet.deviance(x = x.tst, y = y.tst, beta = mod.trn$beta)
       loss.raw <- plk
     }
     return (list("loss.tst"  = loss.raw/wt,
@@ -54,14 +57,14 @@ cv.biglasso.cox <- function(x, y, lambda, nfolds, grouped = F, parallel = F, ...
   }
   if (parallel) {
     numCores <- detectCores()
-    cv.loss <- mclapply(train.idx, train.fun, mc.cores = numCores)
+    cv.loss <- mclapply(train.row.idx, train.fun, mc.cores = numCores)
     # these next two lines is a whole bunch of work just to replicate the format that
     # I had from the non-parallel case. There is almost certainly a more efficient way 
     # of moving forwards
     cv.loss <- unlist(cv.loss, recursive = F, use.names = F)
     cv.loss <- array(cv.loss, dim = c(2, nfolds), dimnames = list(c("loss.tst", "weight"), NULL))    
   } else {
-    cv.loss <- sapply(train.idx, train.fun)
+    cv.loss <- sapply(train.row.idx, train.fun)
   }
   
   # extract cross-validation loss values and organize into a set of matrices (nlambda x nfolds)
