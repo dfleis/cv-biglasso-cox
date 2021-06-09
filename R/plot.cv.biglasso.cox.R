@@ -38,8 +38,9 @@ plot.cv.biglasso.cox <- function(cv.obj, sign.lambda = 1, ...) {
   abline(v = sign.lambda * log(cv.obj$lambda.1se), lty = 3)
   invisible()
 }
-
 plot.compare.cv <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
+  ### NOTE: This only works for the all-in-R version I wrote in cv-biglasso-cox
+  ### See plot.compare.cv2 for a version which works with the cv.biglasso output
   # draw glmnet and biglasso cv plots ontop of one another for easier comparison
   # assumes that the tuning parameter used over the CV procedure is identical
   xlab <- expression(log(lambda))
@@ -88,6 +89,102 @@ plot.compare.cv <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
        tick   = F,
        line   = -0.5, col.axis = 'blue')
   
+  
+  legend("topright", legend = c("cv.biglasso.cox", "cv.glmnet"),
+         pch = c(20, 17), col = c("red", "blue"), lty = c('dashed', 'dotted'), seg.len = 2)
+  
+  invisible()
+}
+
+
+plot.cv <- function(cvm, cvsd, lambda, nzero = NA, sign.lambda = 1, ...) {
+  # reproduce glmnet figures for cross-validation outputs
+  # but instead of supplying the library-specific object 
+  # (e.g. "cv.glmnet"), supply the cross-validated mean 
+  # error (cvm) and standard deviation (cvsd)
+  cvlo <- cvm - cvsd
+  cvup <- cvm + cvsd
+  
+  ## NOTE: this function is written in another file and ought to be loaded
+  ## It's probably best if I do this procedure within this function (or
+  ## write the function in this file).
+  minlams <- getmin.lambda(lambda, cvm, cvsd)
+  
+  xlab <- expression(log(lambda))
+  if (sign.lambda < 0) xlab <- expression(-log(lambda))
+  
+  plot.args <- list(
+    x = sign.lambda * log(lambda),
+    y = cvm,
+    ylim = range(cvlo, cvup),
+    xlab = xlab,
+    ylab = "Partial Likelihood Deviance", # assumes Cox model for label
+    type = "n"
+  )
+  new.args <- list(...)
+  
+  if (length(new.args)) plot.args[names(new.args)] <- new.args
+  
+  do.call("plot", plot.args)
+  error.bars(sign.lambda * log(lambda), cvup, cvlo, col = 'gray60')
+  points(sign.lambda * log(lambda), cvm, pch = 20, col = 'red')
+  axis(side   = 3,
+       at     = sign.lambda * log(lambda),
+       labels = nzero, #apply(cv.obj$model.fit$beta, 2, function(z) sum(z != 0)),
+       tick   = F,
+       line   = 0)
+  abline(v = sign.lambda * log(minlams$lambda.min), lty = 3)
+  abline(v = sign.lambda * log(minlams$lambda.1se), lty = 3)
+  invisible()
+}
+
+plot.compare.cv2 <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
+  # same as plot.compare.cv but works with cv.biglasso output
+  xlab <- expression(log(lambda))
+  if (sign.lambda < 0) xlab <- expression(-log(lambda))
+  
+  cv.bl.lo <- cv.bl$cve - cv.bl$cvse
+  cv.bl.up <- cv.bl$cve + cv.bl$cvse
+  
+  lambda <- cv.bl$lambda
+  ## NOTE: this function is written in another file and ought to be loaded
+  ## It's probably best if I do this procedure within this function (or
+  ## write the function in this file).
+  minlams.bl <- getmin.lambda(lambda, cv.bl$cve, cv.bl$cvse)
+  
+  plot.args <- list(
+    x    = sign.lambda * log(lambda),
+    xlim = range(sign.lambda * log(lambda)),
+    ylim = range(cv.bl.lo, cv.bl.up, cv.gn$cvlo, cv.gn$cvup),
+    xlab = xlab,
+    ylab = "Partial Likelihood Deviance", # assumes Cox model for label
+    type = "n"
+  )
+  do.call("plot", plot.args)
+  grid()
+  error.bars(sign.lambda * log(lambda), cv.bl.up, cv.bl.lo, col = rgb(1, 0, 0, 0.6))
+  error.bars(sign.lambda * log(lambda), cv.gn$cvup, cv.gn$cvlo, col = rgb(0, 0, 1, 0.6))
+  points(sign.lambda * log(lambda)[seq(1, length(lambda), 2)], 
+         cv.bl$cve[seq(1, length(lambda), 2)], 
+         pch = 20, col = 'red')
+  points(sign.lambda * log(lambda)[seq(1, length(lambda), 2)], 
+         cv.gn$cvm[seq(1, length(lambda), 2)], 
+         pch = 17, col = 'blue')
+  abline(v = log(minlams.bl$lambda.min), col = 'red', lty = 'dashed')
+  abline(v = log(minlams.bl$lambda.1se), col = 'red', lty = 'dashed')
+  abline(v = log(cv.gn$lambda.min), col = 'blue', lty = 'dotted')
+  abline(v = log(cv.gn$lambda.1se), col = 'blue', lty = 'dotted')
+  
+  axis(side   = 3,
+       at     = sign.lambda * log(lambda),
+       labels = apply(cv.bl$fit$beta != 0, 2, sum),
+       tick   = F,
+       line   = 0.5, col.axis = 'red')
+  axis(side   = 3,
+       at     = sign.lambda * log(lambda),
+       labels = cv.gn$nzero,
+       tick   = F,
+       line   = -0.5, col.axis = 'blue')
   
   legend("topright", legend = c("cv.biglasso.cox", "cv.glmnet"),
          pch = c(20, 17), col = c("red", "blue"), lty = c('dashed', 'dotted'), seg.len = 2)
