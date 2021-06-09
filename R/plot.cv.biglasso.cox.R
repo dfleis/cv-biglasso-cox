@@ -84,7 +84,7 @@ plot.compare.cv <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
        line   = 0.5, col.axis = 'red')
   axis(side   = 3,
        at     = sign.lambda * log(cv.gn$lambda),
-       labels = cvout.gn$nzero,
+       labels = cv.gn$nzero,
        tick   = F,
        line   = -0.5, col.axis = 'blue')
   

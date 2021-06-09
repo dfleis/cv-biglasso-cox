@@ -11,7 +11,7 @@ library(glmnet)
 library(data.table) # fread() so I can read fewer columns while testing, otherwise read.csv is fine
 options(datatable.fread.datatable=FALSE) # format the data as a data.frame instead of a data.table
 
-NCOLS <- 1000 # number of columns to load (fewer for quicker tests)
+NCOLS <- 5000 # number of columns to load (fewer for quicker tests)
 
 # load data
 pt <- proc.time()
@@ -46,8 +46,8 @@ lapply(list.files("./R/", full.names = T), source)
 set.seed(124)
 penalty  <- "enet"
 alpha    <- 0.5
-lambda   <- exp(seq(-2, -4, length.out = 100))
-nfolds   <- 5
+lambda   <- exp(seq(-1, -4, length.out = 100))
+nfolds   <- 10
 grouped  <- T
 parallel <- F
 
