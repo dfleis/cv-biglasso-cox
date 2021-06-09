@@ -53,7 +53,7 @@ parallel <- F
 
 pt <- proc.time()
 cvout.bl <- cv.biglasso.cox(x        = Xbig,
-                            y        = Y,
+                            y        = y,
                             penalty  = penalty,
                             alpha    = alpha,
                             lambda   = lambda,
@@ -65,7 +65,7 @@ proc.time() - pt
 
 pt <- proc.time()
 cvout.gn <- cv.glmnet(x        = X,                               
-                      y        = Y,
+                      y        = y,
                       family   = "cox",
                       alpha    = alpha,
                       nfolds   = nfolds,
@@ -75,6 +75,10 @@ cvout.gn <- cv.glmnet(x        = X,
                       trace.it = 1,
                       foldid   = cvout.bl$foldid) 
 proc.time() - pt
+
+
+
+
 
 ############ figures
 
