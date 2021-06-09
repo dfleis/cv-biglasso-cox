@@ -1,6 +1,6 @@
 ##
-#
-# To do...
+# Comparing glmnet & the (proposed) biglasso CV outputs
+# for penalized Cox models
 #
 ###
 #=======================================#
@@ -8,22 +8,34 @@
 #=======================================#
 library(biglasso)
 library(glmnet)
+library(data.table) # fread() so I can read fewer columns while testing, otherwise read.csv is fine
+options(datatable.fread.datatable=FALSE) # format the data as a data.frame instead of a data.table
 
-### load data
-filenameX <- "data/sample_SRTR_cleaned_X_NArm.csv" # predictors
-filenameY <- "data/sample_SRTR_cleaned_Y_NArm.csv" # response
+NCOLS <- 1000 # number of columns to load (fewer for quicker tests)
 
-# predictors (already processed into its design matrix)
+# load data
 pt <- proc.time()
-Xbig <- read.big.matrix(file.path(filenameX), header = T, type = "double") 
+dat <- fread("./data/sample_SRTR_cleaned.csv", select = 1:NCOLS, # select columns (must contain columns 1-17)
+             na.strings = c("", "NA"), stringsAsFactors = T)
 proc.time() - pt
 
-# responses
-Y <- read.csv(filenameY, header = T)
-Y <- as.matrix(Y)
-colnames(Y) <- c('time', 'status') # biglasso expects the responses to be labeled in this way
+# TEMPORARY: ignore NA/blank/missing cases
+dat2 <- dat[complete.cases(dat),]
+remove(dat) # remove the original data since it's quite large
 
-X <- as.matrix(Xbig)
+# construct design matrix (excluding pID as this appears to be simply an identifier)
+pt <- proc.time()
+X1 <- model.matrix(~.-1, data = dat2[,1:14]) # confounders (note that we do not have an intercept column in a Cox model's design matirx)
+X2 <- as.matrix(dat2[,18:ncol(dat2)] * 1.0)  # other variables/predictors
+X <- cbind(X1, X2)
+proc.time() - pt
+
+# convert to big.matrix for biglasso
+Xbig <- as.big.matrix(X)
+
+# outcome variable & censor indicator (it may be a good idea to convert to a survival::is.Surv object)
+y <- as.matrix(dat2[,c("surv", "fail_dc")])
+colnames(y) <- c("time", "status")
 
 #===========================================#
 #================ RUN TESTS ================#
@@ -37,7 +49,6 @@ lambda   <- exp(seq(-2, -4, length.out = 100))
 nfolds   <- 5
 grouped  <- T
 parallel <- F
-
 
 
 pt <- proc.time()
@@ -64,6 +75,8 @@ cvout.gn <- cv.glmnet(x        = X,
                       trace.it = 1,
                       foldid   = cvout.bl$foldid) 
 proc.time() - pt
+
+############ figures
 
 plot.cv.biglasso.cox(cvout.bl)
 plot(cv.gn)
@@ -109,8 +122,8 @@ n <- nrow(y)
 #  mod.init <- biglasso::biglasso(X = x, y = y, family = "cox", ...)
 #  lambda.init <- mod.init$lambda
 #} else {
-  mod.init <- biglasso::biglasso(X = x, y = y, lambda = lambda, family = "cox", penalty = penalty, alpha = alpha)
-  lambda.init <- lambda
+mod.init <- biglasso::biglasso(X = x, y = y, lambda = lambda, family = "cox", penalty = penalty, alpha = alpha)
+lambda.init <- lambda
 #}
 
 # assign observations to cross-validation folds from 1, 2, ..., nfolds
