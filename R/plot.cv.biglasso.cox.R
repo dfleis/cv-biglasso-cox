@@ -77,6 +77,18 @@ plot.compare.cv <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
   abline(v = log(cv.gn$lambda.min), col = 'blue', lty = 'dotted')
   abline(v = log(cv.gn$lambda.1se), col = 'blue', lty = 'dotted')
   
+  axis(side   = 3,
+       at     = sign.lambda * log(cv.bl$lambda),
+       labels = apply(cv.bl$model.fit$beta, 2, function(z) sum(z != 0)),
+       tick   = F,
+       line   = 0.5, col.axis = 'red')
+  axis(side   = 3,
+       at     = sign.lambda * log(cv.gn$lambda),
+       labels = cvout.gn$nzero,
+       tick   = F,
+       line   = -0.5, col.axis = 'blue')
+  
+  
   legend("topright", legend = c("cv.biglasso.cox", "cv.glmnet"),
          pch = c(20, 17), col = c("red", "blue"), lty = c('dashed', 'dotted'), seg.len = 2)
   

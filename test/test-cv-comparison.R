@@ -43,6 +43,7 @@ colnames(y) <- c("time", "status")
 # load custom R functions
 lapply(list.files("./R/", full.names = T), source)
 
+set.seed(124)
 penalty  <- "enet"
 alpha    <- 0.5
 lambda   <- exp(seq(-2, -4, length.out = 100))
@@ -81,7 +82,6 @@ proc.time() - pt
 plot.cv.biglasso.cox(cvout.bl)
 plot(cvout.gn)
 plot.compare.cv(cvout.bl, cvout.gn)
-
 #plot(cvout.gn$cvm - cvout.bl$test.loss ~ lambda, type = 'l', log = 'x', lwd = 2)
 
 
