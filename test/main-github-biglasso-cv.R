@@ -1,28 +1,57 @@
-##
-# Comparing glmnet & the (proposed) biglasso CV outputs
-# for penalized Cox models
+####################################################################
+# Running the new CV implementation for the Cox regression 
+# algorithm found in the biglasso package.
 #
-###
+# Script for use with the cleaned SRTR data.
+#
+# NOTES:
+#   * Issues may arise when loading the data (lines using read.csv()
+#     or fread()).
+#   * Issues may arise when transforming the loaded data into the
+#     appropriate design matrix (lines using model.matrix().
+#   * If this turns out to be an issue then it will be necessary to
+#     write up a separate script that transforms the data & writes 
+#     it to disk. After such pre-processing, we would call
+#     read.big.matrix() to create the big.matrix representation of
+#     the design matrix, finally allowing us to run biglasso. 
+#     (The ability to run such a regression without loading the
+#      data into memory is one of the selling-features of biglasso!)
+#
+####################################################################
 #=======================================#
 #================ SETUP ================#
 #=======================================#
 #remove.packages("biglasso")
 #devtools::install_github("dfleis/biglasso")
 library(biglasso)
-library(glmnet)
 library(data.table) # fread() so I can read fewer columns while testing, otherwise read.csv is fine
 options(datatable.fread.datatable=FALSE) # format the data as a data.frame instead of a data.table
 
-set.seed(124)
+### INPUTS/PARAMETERS
+set.seed(124) # only randomness is from building the test/train CV subsets (but this is non-trivial for reproducibility)
+# set NCOLS to NULL if you want to read all the columns, otherwise use NCOLS to specify
+# the number of columns you wish to load (fewer columns for quicker tests)
+NCOLS    <- 1000 
+#NCOLS   <- NULL
+filepath <- "./data/sample_SRTR_cleaned.csv"
+penalty  <- "enet"
+alpha    <- 0.5 # elastic net mixing param. (alpha = 0 is ridge and alpha = 1 is lasso)
+nfolds   <- 10  
+lambda   <- exp(seq(-1, -5, length.out = 100)) # biglasso will generate a path of tuning params if unspecified
+grouped  <- T # grouped = F is 'basic' CV loss, grouped = T is 'V&VH' CV loss. see https://arxiv.org/pdf/1905.10432.pdf
+ncores   <- 10 # biglasso splits the fold calculation across the cores, so setting ncores > nfolds is likely to not add much
 
-NCOLS <- 500 # number of columns to load (fewer for quicker tests)
-
-# load data
+### LOAD DATA
 pt <- proc.time()
-dat <- fread("./data/sample_SRTR_cleaned.csv", select = 1:NCOLS, # select columns (must contain columns 1-17)
-             na.strings = c("", "NA"), stringsAsFactors = T)
+if (!is.null(NCOLS)) {
+  # select columns (NOTE: must contain columns 1-17)
+  dat <- fread(filepath, select = 1:NCOLS, na.strings = c("", "NA"), stringsAsFactors = T)
+} else {
+  dat <- fread(filepath, na.strings = c("", "NA"), stringsAsFactors = T)
+}
 proc.time() - pt
 
+### PRE-PROCESSING
 # TEMPORARY: ignore NA/blank/missing cases
 dat2 <- dat[complete.cases(dat),]
 remove(dat) # remove the original data since it's quite large
@@ -36,48 +65,17 @@ proc.time() - pt
 
 # convert to big.matrix for biglasso
 Xbig <- as.big.matrix(X)
+remove(X) # the original design matrix is uncessary and is just taking up valuable RAM 
 
-# outcome variable & censor indicator (it may be a good idea to convert to a survival::is.Surv object)
+# extract outcome variable & censor indicator 
+# (it may be a good idea to convert to a survival::is.Surv object)
 y <- as.matrix(dat2[,c("surv", "fail_dc")])
 colnames(y) <- c("time", "status")
-
-
-# no <- 1000
-# nx <- 100
-# dat <- coxed::sim.survdata(N = no, xvars = nx)
-# X <- as.matrix(dat$xdata)
-# y <- cbind("time" = as.numeric(dat$data$y), "status" = dat$data$failed)
-# Xbig <- as.big.matrix(X)
 
 #===========================================#
 #================ RUN TESTS ================#
 #===========================================#
-# load custom R functions (mainly plot tools for the following tests)
-lapply(list.files("./R/", full.names = T), source)
 
-
-penalty  <- "enet"
-alpha    <- 0.5 # elastic net penalty (alpha = 0 is ridge and alpha = 1 is lasso)
-nfolds   <- 5
-lambda   <- exp(seq(-2, -6, length.out = 100))
-grouped  <- F # grouped = F is 'basic' CV loss, grouped = T is 'V&VH' CV loss. see https://arxiv.org/pdf/1905.10432.pdf
-parallel <- F # "use parallel  to fit each fold. Must register parallel before hand, such as doMC or others"
-ncores   <- 1
-trace.it <- 1
-
-# fit.bl <- biglasso(X       = Xbig,
-#                    y       = y,
-#                    family  = "cox",
-#                    penalty = "enet",
-#                    alpha   = alpha,
-#                    lambda  = lambda)
-# fit.gn <- glmnet(x      = X,
-#                  y      = y,
-#                  family = "cox",
-#                  alpha  = alpha,
-#                  lambda = lambda)
-
-set.seed(124) # necessary for testing as the bigmemory package has an (unintended?) effect on random number generation
 pt <- proc.time()
 cv.bl <- cv.biglasso(X       = Xbig,                               
                      y       = y,
@@ -85,53 +83,49 @@ cv.bl <- cv.biglasso(X       = Xbig,
                      penalty = penalty,
                      alpha   = alpha,
                      nfolds  = nfolds,
-                     lambda  = lambda,
+                     lambda  = lambda, # comment this out if we wish for biglasso to generate its own sequence
                      grouped = grouped,
                      ncores  = ncores,
-                     trace   = as.logical(trace.it))
-proc.time() - pt
+                     trace   = 1) 
+(tm.bl <- proc.time() - pt)
 
 
-if (parallel) {doMC::registerDoMC(cores = ncores)}
+#===========================================#
+#================= FIGURES =================#
+#===========================================#
+### PLOT 1: main CV output figure
+plot(cv.bl)
 
-pt <- proc.time()
-cv.gn <- cv.glmnet(x        = X,                               
-                   y        = y,
-                   family   = "cox",
-                   alpha    = alpha,
-                   nfolds   = nfolds,
-                   lambda   = lambda,
-                   grouped  = grouped,
-                   parallel = parallel,
-                   trace.it = trace.it,
-                   foldid   = cv.bl$cv.ind) 
-proc.time() - pt
+### PLOT 2a: fitted coef. values (default biglasso implementation)
+plot(cv.bl$fit)
 
-#plot(cv.bl)
-#plot(cv.gn)
-#plot(cv.bl$cve ~ lambda, log = 'x', type = 'l', lwd = 4, ylim = range(cv.bl$cve, cv.gn$cvm))
-#lines(cv.gn$cvm ~ lambda, col = 'red', lty = 'dashed', lwd = 4)
+### PLOT 2b: fitted coef. values over the tuning parameter
+# NOTE: This will potentially take quite some time to render
+# if using a large number of covariates
+beta.bl <- cv.bl$fit$beta
+beta.bl.cv <- cv.bl$fit$beta[,which(cv.bl$lambda == cv.bl$lambda.min)]
 
-#plot.cv(cv.bl$cve, cv.bl$cvse, lambda, nzero = apply(cv.bl$fit$beta != 0, 2, sum))
-#plot.cv(cv.gn$cvm, cv.gn$cvsd, lambda, nzero = cv.gn$nzero)
+plot(NA, xlim = range(log(lambda)), ylim = range(beta.bl),
+     xlab = expression(log(lambda)), ylab = "Fitted Value",
+     main = "Fitted Coefficient Estimates\nAlong the Penalization Path")
+grid(); abline(h = 0, v = 0, lwd = 2, col = 'gray50')
+for (i in 1:nrow(beta.bl)) {
+  lines(beta.bl[i,] ~ log(lambda), col = rgb(0, 0, 0, 0.5), lwd = 1)
+}
 
-plot.compare.cv2(cv.bl, cv.gn)
+### PLOT 3: counts of number of variables selected by the model
+nz.beta <- apply(beta.bl, 2, function(b) sum(b != 0))
+plot(NA, xlim = range(log(lambda)), ylim = range(nz.beta),
+     xlab = expression(log(lambda)), ylab = "Nb. of Coefs.",
+     main = "Number of Covariates Retained by biglasso\n(Non-Zero Coefficients)")
+grid(); abline(h = 0, v = 0, lwd = 2, col = 'gray50')
+lines(nz.beta ~ log(lambda), lwd = 2, type = 's')
 
-#fields::image.plot(1:ncol(X), -log(lambda), as.matrix(fit.bl$beta) - as.matrix(fit.gn$beta), col = pals::coolwarm(65))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### PLOT 4:
+plot(NA, xlim = c(1, length(beta.bl.cv)), ylim = range(beta.bl.cv), 
+     ylab = "Coef. Value", xlab = "Covariate Index",
+     main = "Fitted Coefficient Estimates\nAt the Minimizing Penalization Parameter")
+grid(); abline(h = 0, lwd = 2, col = 'gray50')
+for (i in 1:length(beta.bl.cv)) {
+  if (beta.bl.cv[i] != 0) segments(x0 = i, x1 = i, y0 = 0, y1 = beta.bl.cv[i], lwd = 1)
+}

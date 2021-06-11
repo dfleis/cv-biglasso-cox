@@ -12,12 +12,11 @@ library(biglasso)
 library(glmnet)
 
 set.seed(124)
-n <- 1000
-p <- 100
-p_nz <- 0.5
-beta <- rnorm(p, 0, 0.1) * rbinom(p, 1, p_nz)/10
-
-dat <- coxed::sim.survdata(N = n, T = 100, xvars = p, beta = beta)
+n <- 100
+p <- 1000
+p_nz <- 0.1
+beta <- rnorm(p, 0, 1) * rbinom(p, 1, p_nz)
+dat <- coxed::sim.survdata(N = n, T = 100000, xvars = p, beta = beta)
 X <- as.matrix(dat$xdata)
 y <- cbind("time" = as.numeric(dat$data$y), "status" = dat$data$failed)
 Xbig <- as.big.matrix(X)
@@ -31,8 +30,8 @@ lapply(list.files("./R/", full.names = T), source)
 penalty  <- "enet"
 alpha    <- 0.5 # elastic net penalty (alpha = 0 is ridge and alpha = 1 is lasso)
 nfolds   <- 5
-lambda   <- exp(seq(-2, -6, length.out = 100))
-grouped  <- F # grouped = F is 'basic' CV loss, grouped = T is 'V&VH' CV loss. see https://arxiv.org/pdf/1905.10432.pdf
+lambda   <- exp(seq(1, -1, length.out = 100))
+grouped  <- T # grouped = F is 'basic' CV loss, grouped = T is 'V&VH' CV loss. see https://arxiv.org/pdf/1905.10432.pdf
 parallel <- F # "use parallel  to fit each fold. Must register parallel before hand, such as doMC or others"
 ncores   <- 1
 trace.it <- 1
