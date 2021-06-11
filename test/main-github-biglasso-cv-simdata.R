@@ -49,6 +49,10 @@ library(glmnet)
 library(data.table) # fread() so I can read fewer columns while testing, otherwise read.csv is fine
 options(datatable.fread.datatable=FALSE) # format the data as a data.frame instead of a data.table
 
+# load custom R functions (mainly plot tools for the following tests)
+source("~/projects/cv-biglasso-cox/R/plot.cv.biglasso.cox.R")
+source("~/projects/cv-biglasso-cox/R/getmin.lambda.R")
+
 set.seed(124)
 n <- 100
 p <- 500
@@ -67,9 +71,6 @@ table(y[,2])
 #===========================================#
 #================ RUN TESTS ================#
 #===========================================#
-# load custom R functions (mainly plot tools for the following tests)
-{lapply(list.files("./R/", full.names = T), source); invisible()}
-
 
 set.seed(124) # necessary for testing as the bigmemory package has an (unintended?) effect on random number generation
 penalty  <- "enet"
@@ -119,8 +120,6 @@ tm.gn <- proc.time() - pt
 plot(cv.bl)
 plot(cv.gn)
 
-### PLOT 1
-plot.compare.cv2(cv.bl, cv.gn)
 
 beta.bl <- cv.bl$fit$beta
 beta.gn <- cv.gn$glmnet.fit$beta
@@ -155,6 +154,10 @@ for (i in 1:ncol(X)) {
   lines(beta.gn[i,] ~ log(lambda), col = myclrs2[2])
 }
 legend("topright", legend = c("biglasso", "glmnet"), col = myclrs2, seg.len = 2, lwd = 4)
+
+
+### PLOT 1
+plot.compare.cv2(cv.bl, cv.gn)
 
 
 tm.bl

@@ -15,7 +15,11 @@ library(glmnet)
 library(data.table) # fread() so I can read fewer columns while testing, otherwise read.csv is fine
 options(datatable.fread.datatable=FALSE) # format the data as a data.frame instead of a data.table
 
-NCOLS <- 5000 # number of columns to load (fewer for quicker tests)
+# load custom R functions (mainly plot tools for the following tests)
+source("~/projects/cv-biglasso-cox/R/plot.cv.biglasso.cox.R")
+source("~/projects/cv-biglasso-cox/R/getmin.lambda.R")
+
+NCOLS <- 1000 # number of columns to load (fewer for quicker tests)
 # load data
 filepath <- "./data/sample_SRTR_cleaned.csv"
 
@@ -49,8 +53,6 @@ colnames(y) <- c("time", "status")
 #===========================================#
 #================ RUN TESTS ================#
 #===========================================#
-# load custom R functions (mainly plot tools for the following tests)
-lapply(list.files("./R/", full.names = T), source)
 
 set.seed(124) # necessary for testing as the bigmemory package has an (unintended?) effect on random number generation
 penalty  <- "enet"
@@ -73,7 +75,7 @@ cv.bl <- cv.biglasso(X       = Xbig,
                      grouped = grouped,
                      ncores  = ncores,
                      trace   = as.logical(trace.it))
-tm.bl <- proc.time() - pt
+(tm.bl <- proc.time() - pt)
 
 if (parallel) {doMC::registerDoMC(cores = ncores)}
 
@@ -88,14 +90,13 @@ cv.gn <- cv.glmnet(x        = X,
                    parallel = parallel,
                    trace.it = trace.it,
                    foldid   = cv.bl$cv.ind) 
-tm.gn <- proc.time() - pt
+(tm.gn <- proc.time() - pt)
 
 #===========================================#
 #================= FIGURES =================#
 #===========================================#
 
-### PLOT 1
-plot.compare.cv2(cv.bl, cv.gn)
+
 
 beta.bl <- cv.bl$fit$beta
 beta.gn <- cv.gn$glmnet.fit$beta
@@ -128,3 +129,9 @@ for (i in 1:ncol(X)) {
 }
 legend("topright", legend = c("biglasso", "glmnet"), col = myclrs2, seg.len = 2, lwd = 4)
 
+### PLOT 1
+plot.compare.cv2(cv.bl, cv.gn)
+
+
+tm.bl
+tm.gn
