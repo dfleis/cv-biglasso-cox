@@ -177,7 +177,7 @@ plot.compare.cv2 <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
   abline(v = log(cv.gn$lambda.1se), col = 'blue', lty = 'dotted')
   
   axis(side   = 3,
-       at     = sign.lambda * log(lambda.bl),
+       at     = sign.lambda * log(cv.bl$fit$lambda),
        labels = apply(cv.bl$fit$beta != 0, 2, sum),
        tick   = F,
        line   = 0.5, col.axis = 'red')
