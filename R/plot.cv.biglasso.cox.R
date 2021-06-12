@@ -164,7 +164,7 @@ plot.compare.cv2 <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
   do.call("plot", plot.args)
   grid()
   error.bars(sign.lambda * log(lambda.bl), cv.bl.up, cv.bl.lo, col = rgb(1, 0, 0, 0.6))
-  error.bars(sign.lambda * log(lambda.bl), cv.gn$cvup, cv.gn$cvlo, col = rgb(0, 0, 1, 0.6))
+  error.bars(sign.lambda * log(lambda.gn), cv.gn$cvup, cv.gn$cvlo, col = rgb(0, 0, 1, 0.6))
   points(sign.lambda * log(lambda.bl)[seq(1, length(lambda.bl), 2)], 
          cv.bl$cve[seq(1, length(lambda.bl), 2)], 
          pch = 20, col = 'red')
