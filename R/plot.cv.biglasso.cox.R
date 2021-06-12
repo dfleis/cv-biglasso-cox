@@ -146,15 +146,16 @@ plot.compare.cv2 <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
   cv.bl.lo <- cv.bl$cve - cv.bl$cvse
   cv.bl.up <- cv.bl$cve + cv.bl$cvse
   
-  lambda <- cv.bl$lambda
+  lambda.bl <- cv.bl$lambda
+  lambda.gn <- cv.gn$lambda
   ## NOTE: this function is written in another file and ought to be loaded
   ## It's probably best if I do this procedure within this function (or
   ## write the function in this file).
-  minlams.bl <- getmin.lambda(lambda, cv.bl$cve, cv.bl$cvse)
+  minlams.bl <- getmin.lambda(lambda.bl, cv.bl$cve, cv.bl$cvse) # glmnet already provides this in the output
   
   plot.args <- list(
-    x    = sign.lambda * log(lambda),
-    xlim = range(sign.lambda * log(lambda)),
+    x    = sign.lambda * log(lambda.gn), # I think using the glmnet output is safer since it will not omit saturated lambdas
+    xlim = range(sign.lambda * log(lambda.bl), sign.lambda * log(lambda.gn)),
     ylim = range(cv.bl.lo, cv.bl.up, cv.gn$cvlo, cv.gn$cvup),
     xlab = xlab,
     ylab = "Partial Likelihood Deviance", # assumes Cox model for label
@@ -162,13 +163,13 @@ plot.compare.cv2 <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
   )
   do.call("plot", plot.args)
   grid()
-  error.bars(sign.lambda * log(lambda), cv.bl.up, cv.bl.lo, col = rgb(1, 0, 0, 0.6))
-  error.bars(sign.lambda * log(lambda), cv.gn$cvup, cv.gn$cvlo, col = rgb(0, 0, 1, 0.6))
-  points(sign.lambda * log(lambda)[seq(1, length(lambda), 2)], 
-         cv.bl$cve[seq(1, length(lambda), 2)], 
+  error.bars(sign.lambda * log(lambda.bl), cv.bl.up, cv.bl.lo, col = rgb(1, 0, 0, 0.6))
+  error.bars(sign.lambda * log(lambda.bl), cv.gn$cvup, cv.gn$cvlo, col = rgb(0, 0, 1, 0.6))
+  points(sign.lambda * log(lambda.bl)[seq(1, length(lambda.bl), 2)], 
+         cv.bl$cve[seq(1, length(lambda.bl), 2)], 
          pch = 20, col = 'red')
-  points(sign.lambda * log(lambda)[seq(1, length(lambda), 2)], 
-         cv.gn$cvm[seq(1, length(lambda), 2)], 
+  points(sign.lambda * log(lambda.gn)[seq(1, length(lambda.gn), 2)], 
+         cv.gn$cvm[seq(1, length(lambda.gn), 2)], 
          pch = 17, col = 'blue')
   abline(v = log(minlams.bl$lambda.min), col = 'red', lty = 'dashed')
   abline(v = log(minlams.bl$lambda.1se), col = 'red', lty = 'dashed')
@@ -176,12 +177,12 @@ plot.compare.cv2 <- function(cv.bl, cv.gn, sign.lambda = 1, ...) {
   abline(v = log(cv.gn$lambda.1se), col = 'blue', lty = 'dotted')
   
   axis(side   = 3,
-       at     = sign.lambda * log(lambda),
+       at     = sign.lambda * log(lambda.bl),
        labels = apply(cv.bl$fit$beta != 0, 2, sum),
        tick   = F,
        line   = 0.5, col.axis = 'red')
   axis(side   = 3,
-       at     = sign.lambda * log(lambda),
+       at     = sign.lambda * log(lambda.gn),
        labels = cv.gn$nzero,
        tick   = F,
        line   = -0.5, col.axis = 'blue')
