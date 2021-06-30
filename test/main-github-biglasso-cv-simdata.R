@@ -57,7 +57,7 @@ set.seed(124)
 n <- 100
 p <- 500
 p_nz <- 0.1
-beta <- rnorm(p, 0, 1) * rbinom(p, 1, p_nz)
+beta <- rnorm(p, 0, 1) * rbinom(p, 1, 1-p_nz)
 
 dat <- sim.surv.weib(n = n, beta = beta, rho = 10, rate.cens = 0.05, round.times=T)
 y <- dat$y
